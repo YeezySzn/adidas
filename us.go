@@ -10,49 +10,8 @@ import (
     "encoding/json"
     "errors"
 )
-func ATC(client *http.Client,pid string,retry int)error{
-    if retry>9{
-        return errors.New("Error Adding: "+pid+" to Cart")
-    }
-masterpid:= strings.Split(pid,"_")[0]
-urlstr := "http://www.adidas.com/on/demandware.store/Sites-adidas-US-Site/en_US/Cart-MiniAddProduct"
-data := url.Values{}
-data.Add("pid",pid)
-data.Add("masterPid",masterpid)
-data.Add("layer","Add To Bag overlay")
-data.Add("Quantity","1")
-data.Add("x-PrdRtt","")
-data.Add("g-recaptcha-response","")
-data.Add("request","ajax")
-data.Add("responseformat","json")
-data.Add("ajax","true")
-req, err := http.NewRequest("POST", urlstr, bytes.NewBufferString(data.Encode()))
-req.Header.Add("User-Agent", UserAgent)
-    req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-    req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
-res, err := client.Do(req)
-if err!=nil{
-	err := ATC(client,pid,retry+1)
-    return err
-}
-if res.StatusCode!=http.StatusOK{
-err := ATC(client,pid,retry+1)
-return err
-}
-
-defer res.Body.Close()
-body, _:= ioutil.ReadAll(res.Body)
-j := string(body)
-added := strings.Contains(j,"SUCCESS")
-if added{
-return nil
-}else{
-	err := ATC(client,pid,retry+1)
-    return err
-}
-}
 func AqcuireShippingKeys(client *http.Client,retry int) (string,string,error){
-    if retry>9{
+    if retry>6{
         return "","",errors.New("Error Aqcuireing Shipping Keys")
     }
 urlstr := "https://www.adidas.com/us/delivery-start";
@@ -76,7 +35,7 @@ return action,key,nil
 
 }
 func SubmitShippingDetails(client *http.Client,action,key,shippingisbilling string,profile map[string]string,retry int) error{
-    if retry>9{
+    if retry>6{
         return errors.New("Error Submitted Shipping")
     }
 data := url.Values{}
@@ -124,7 +83,8 @@ req.Header.Add("User-Agent", UserAgent)
     req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
     req.Header.Add("Origin","https://www.adidas.com")
     req.Header.Add("Referer","https://www.adidas.com/us/delivery-start")
-    
+    req.Header.Add("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+    req.Header.Add("Connection","keep-alive")
 res, err := client.Do(req)
 if err!=nil{
     err := SubmitShippingDetails(client,action,key,shippingisbilling,profile,retry+1)
@@ -139,12 +99,14 @@ err := SubmitShippingDetails(client,action,key,shippingisbilling,profile,retry+1
 
 }
 func AqcuirePaymentKeys(client *http.Client,retry int) (string,string,error){
-    if retry>9{
+    if retry>6{
         return "","",errors.New("Error Submitted Shipping")
     }
     urlstr := "https://www.adidas.com/on/demandware.store/Sites-adidas-US-Site/en_US/COSummary-Start"
     req, err := http.NewRequest("GET",urlstr,nil)
 req.Header.Add("User-Agent",UserAgent)
+req.Header.Add("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+req.Header.Add("Connection","keep-alive")
 res, err:= client.Do(req)
 if err!=nil{
     action,paymentkey,err := AqcuirePaymentKeys(client,retry+1)
@@ -163,10 +125,10 @@ return action,paymentkey,nil
 
 }
 func SubmitPayDetails(client *http.Client,action, paymentkey string,profile map[string]string,retry int) (map[string]interface{},error){
-    if retry>9{
+    if retry>6{
         return nil,errors.New("Error Submitted Shipping")
     }
-    cardint:= "001"
+    cardint:= profile["cardtype"]
     data := url.Values{}
     data.Add("dwfrm_payment_creditCard_type",cardint)
     data.Add("dwfrm_payment_creditCard_owner",profile["bfname"]+profile["blname"])
@@ -178,6 +140,8 @@ func SubmitPayDetails(client *http.Client,action, paymentkey string,profile map[
 req.Header.Add("User-Agent", UserAgent)
     req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
     req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
+    req.Header.Add("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+    req.Header.Add("Connection","keep-alive")
     res, err:= client.Do(req)
     if err!=nil{
         r,err := SubmitPayDetails(client,action,paymentkey,profile,retry+1)
@@ -197,9 +161,9 @@ return fields,nil
     
 
 }
-func CyberSourceSubmit(client *http.Client,profile map[string]string,fields map[string]interface{},retry int)error{
-    if retry>9{
-        return errors.New("Error Submitted Shipping")
+func CyberSourceSubmit(client *http.Client,profile map[string]string,fields map[string]interface{},retry int)(string,url.Values,error){
+    if retry>6{
+        return "",nil,errors.New("Error Submitted Shipping")
     }
     urlstr := "https://secureacceptance.cybersource.com/silent/pay"
     data := url.Values{}
@@ -230,16 +194,57 @@ func CyberSourceSubmit(client *http.Client,profile map[string]string,fields map[
     req.Header.Add("Referer","https://www.adidas.com/on/demandware.store/Sites-adidas-US-Site/en_US/COSummary-Start")
     req.Header.Add("Content-Type","application/x-www-form-urlencoded")
     req.Header.Add("Content-Length",strconv.Itoa(len(data.Encode())))
+    req.Header.Add("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+    req.Header.Add("Connection","keep-alive")
     res,err := client.Do(req)
     if err!=nil{
-        err := CyberSourceSubmit(client,profile,fields,retry+1)
+        s,body, err := CyberSourceSubmit(client,profile,fields,retry+1)
+        return s,body,err
+    }
+    if res.StatusCode!=http.StatusOK{
+    s,body,err := CyberSourceSubmit(client,profile,fields,retry+1)
+        return s,body,err
+}
+    defer res.Body.Close()
+    doc, err:= goquery.NewDocumentFromReader(res.Body)
+    action,_ := doc.Find("#custom_redirect").Attr("action")
+nodes := doc.Find("input[type=hidden]")
+return_body := url.Values{}
+nodes.Each(func(i int, node *goquery.Selection) {
+    name,_ := node.Attr("name")
+    val,_ := node.Attr("value")
+    return_body.Add(name,val)
+
+})
+return action,return_body,nil
+
+   
+}
+func ReturnToAdidas(client *http.Client,urlstr string, data url.Values,retry int)error{
+if retry>6{
+        return errors.New("Error Submitting Order")
+    }
+    req,err := http.NewRequest("POST",urlstr,bytes.NewBufferString(data.Encode()))
+    req.Header.Add("User-Agent",UserAgent)
+    req.Header.Add("Origin","https://www.adidas.com")
+    req.Header.Add("Content-Type","application/x-www-form-urlencoded")
+    req.Header.Add("Content-Length",strconv.Itoa(len(data.Encode())))
+    req.Header.Add("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+    req.Header.Add("Connection","keep-alive")
+    res,err := client.Do(req)
+    if err!=nil{
+        err := ReturnToAdidas(client,urlstr,data,retry+1)
         return err
     }
     if res.StatusCode!=http.StatusOK{
-    err := CyberSourceSubmit(client,profile,fields,retry+1)
+    err := ReturnToAdidas(client,urlstr,data,retry+1)
         return err
 }
     defer res.Body.Close()
-    return nil
-   
+     body,err := ioutil.ReadAll(res.Body)
+     if strings.Contains(string(body),"re-enter"){
+        return errors.New("Order Declined")
+     }else{
+        return nil
+     }
 }

@@ -6,32 +6,58 @@ import (
   "strconv"
   "net/http"
   "github.com/PuerkitoBio/goquery"
+  "time"
+  "strings"
+  //"fmt"
 )
 func get_server_url(country string) Server{
-  serverext["US"]="com"
-  serverext["GB"] = "co.uk"
-  serverext["AU"]="com.au"
+  var locale string
+ switch (country){
+ case "DK":
+  locale="da_DK"
+ case "CZ":
+  locale="cs_CZ"
+case "BE":
+  locale = "fr_BE"
+case "IE":
+  locale="en_IE"
+case "US":
+  locale="en_US"
+case "SE":
+  locale="sv_SE"
+default :
+  locale = strings.ToLower(country)+"_"+country
+
+ }
   return Server{
-    sign_in_page: "https://cp.adidas." + serverext[country] + "/web/eCom/en_" + country + "/loadsignin?target=account",
-    start_sso_session: "https://cp.adidas." + serverext[country] + "/idp/startSSO.ping",
-    create_sso_cookie: "https://cp.adidas." + serverext[country] + "/web/ssoCookieCreate?resume",
-    create_sso_domain_cookie: "https://cp.adidasspecialtysports." + serverext[country] + "/web/createSSODomainCookie?domain=.adidasspecialtysports.com&ssoiniturl=https://cp.adidas.com",
-    cp_resume: "https://cp.adidas." + serverext[country],
-    cp_saml: "https://cp.adidas." + serverext[country] + "/sp/ACS.saml2",
-    resume_login: "https://www.adidas." + serverext[country] + "/on/demandware.store/Sites-adidas-" + country + "-Site/en_" + country + "/MyAccount-ResumeLogin",
-    target_resource: "https://www.adidas." + serverext[country] + "/on/demandware.store/Sites-adidas-" + country + "-Site/en_" + country +"/MyAccount-ResumeLogin?target=account&target=account",
-    my_account: "https://www.adidas." + serverext[country] + "/on/demandware.store/Sites-adidas-" + country + "-Site/en_" + country + "/MyAccount-Show?fromlogin=true",
-    relay_state: "https://www.adidas." + serverext[country] + "/on/demandware.store/Sites-adidas-" + country + "-Site/en_" + country + "/MyAccount-ResumeLogin?target=account&target=account"}
-  }
+    sign_in_page: "https://cp.adidas." + Serverext[country] + "/web/eCom/" + locale + "/loadsignin?target=account",
+    start_sso_session: "https://cp.adidas." + Serverext[country] + "/idp/startSSO.ping",
+    create_sso_cookie: "https://cp.adidas." + Serverext[country] + "/web/ssoCookieCreate?resume",
+    create_sso_domain_cookie: "https://cp.adidasspecialtysports." + Serverext[country] + "/web/createSSODomainCookie?domain=.adidasspecialtysports.com&ssoiniturl=https://cp.adidas.com",
+    cp_resume: "https://cp.adidas." + Serverext[country],
+    cp_saml: "https://cp.adidas." + Serverext[country] + "/sp/ACS.saml2",
+    resume_login: "https://www.adidas." + Serverext[country] + "/on/demandware.store/Sites-adidas-" + country + "-Site/" + locale + "/MyAccount-ResumeLogin",
+    target_resource: "https://www.adidas." + Serverext[country] + "/on/demandware.store/Sites-adidas-" + country + "-Site/" + locale +"/MyAccount-ResumeLogin?target=account&target=account",
+    my_account: "https://www.adidas." + Serverext[country] + "/on/demandware.store/Sites-adidas-" + country + "-Site/" + locale + "/MyAccount-Show?fromlogin=true",
+    relay_state: "https://www.adidas." + Serverext[country] + "/on/demandware.store/Sites-adidas-" + country + "-Site/" + locale + "/MyAccount-ResumeLogin?target=account&target=account"}
+ }
   func LoadSignInPage(client *http.Client,urlstr string,retry int) (s string,err error){
-    if retry>9{
+    if retry>6{
       return "",errors.New("Error Loading Sign In Page")
     }
 req, err := http.NewRequest("GET",urlstr,nil)
-
+req.Header.Add("Pragma","no-cache")
+  //req.Header.Add("Origin","https://cp.adidas.com")
+  req.Header.Add("Accept-Language","en-US,en;q=0.8")
+  req.Header.Add("Upgrade-Insecure-Requests","1")
+  req.Header.Add("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+  req.Header.Add("Cache-Control","no-cache")
+ // req.Header.Add("Referer","https://cp.adidas.com/web/eCom/en_US/loadsignin?target=account")
+  req.Header.Add("Connection","keep-alive")
 req.Header.Add("User-Agent",UserAgent)
 res, err:= client.Do(req)
 if err!=nil{
+  time.Sleep(time.Millisecond * 500)
   csrf,err := LoadSignInPage(client,urlstr,retry+1)
     return csrf,err
   }
@@ -43,17 +69,26 @@ return csrf,nil
 
   }
 func start_sso_session(client *http.Client,urlstr string, data url.Values,retry int)(string,error){
-  if retry>9{
+  if retry>7{
       return "",errors.New("Error Creating SSO Session")
     }
 req, err := http.NewRequest("POST", urlstr, bytes.NewBufferString(data.Encode()))
-req.Header.Add("User-Agent", UserAgent)
+req.Header.Add("Pragma","no-cache")
+  //req.Header.Add("Origin","https://cp.adidas.com")
+  req.Header.Add("Accept-Language","en-US,en;q=0.8")
+  req.Header.Add("Upgrade-Insecure-Requests","1")
+  req.Header.Add("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+  req.Header.Add("Cache-Control","no-cache")
+  //req.Header.Add("Referer","https://cp.adidas.com/web/eCom/en_US/loadsignin?target=account")
+  req.Header.Add("Connection","keep-alive")
+  req.Header.Add("User-Agent", UserAgent)
     req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
     req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 res, err := client.Do(req)
 if err!=nil{
-  if err.Error()!=""{
-  location,err := start_sso_session(client, urlstr,data,retry +1)
+  if !strings.Contains(err.Error(),"302"){
+  time.Sleep(time.Millisecond * 200)
+ location,err := start_sso_session(client, urlstr,data,retry +1)
   return location,err
 }
 }
@@ -61,28 +96,46 @@ if res.StatusCode==302{
   location := res.Header.Get("Location")
   return location,nil
 }else{
+  time.Sleep(time.Millisecond * 200)
   location,err := start_sso_session(client, urlstr,data,retry +1)
   return location,err
 }
 
 }
 func get_request_body(username,password,country,csrf string) url.Values{
+  var locale string
+ switch (country){
+ case "DK":
+  locale="da_DK"
+ case "CZ":
+  locale="cs_CZ"
+case "BE":
+  locale = "fr_BE"
+case "IE":
+  locale="en_IE"
+case "US":
+  locale="en_US"
+case "SE":
+  locale="sv_SE"
+default :
+  locale = strings.ToLower(country)+"_"+country
+
+ }
     var (
     signinSubmit= "Sign in"
     IdpAdapterId= "adidasIdP10"
-    SpSessionAuthnAdapterId= "https://cp.adidas." + serverext[country] + "/web/"
+    SpSessionAuthnAdapterId= "https://cp.adidas." + Serverext[country] + "/web/"
     PartnerSpId= "sp:demandware"
     validator_id= "adieComDWus"
-    TargetResource= "https://www.adidas." + serverext[country] + "/on/demandware.store/Sites-adidas-" + country + "-Site/en_" + country + "/MyAccount-ResumeLogin?target=account&target=account"
-    InErrorResource= "https://www.adidas." + serverext[country] + "/on/demandware.store/Sites-adidas-" + country + "-Site/en_" + country + "/null"
-    loginUrl= "https://cp.adidas." + serverext[country] + "/web/eCom/en_US/loadsignin"
-    cd= "eCom|en_" + country + "|cp.adidas." + serverext[country] + "|null"
+    TargetResource= "https://www.adidas." + Serverext[country] + "/on/demandware.store/Sites-adidas-" + country + "-Site/" + locale + "/MyAccount-ResumeLogin?target=account&target=account"
+    InErrorResource= "https://www.adidas." + Serverext[country] + "/on/demandware.store/Sites-adidas-" + country + "-Site/" + locale + "/null"
+    loginUrl= "https://cp.adidas." + Serverext[country] + "/web/eCom/"+locale+"/loadsignin"
+    cd= "eCom|" + locale + "|cp.adidas." + Serverext[country] + "|null"
     app= "eCom"
-    locale= "en_" + country
-    domain= "cp.adidas." + serverext[country]
+    domain= "cp.adidas." + Serverext[country]
     email= ""
-    pfRedirectBaseURL_test= "https://cp.adidas." + serverext[country]
-    pfStartSSOURL_test= "https://cp.adidas." + serverext[country] + "/idp/startSSO.ping"
+    pfRedirectBaseURL_test= "https://cp.adidas." + Serverext[country]
+    pfStartSSOURL_test= "https://cp.adidas." + Serverext[country] + "/idp/startSSO.ping"
     resumeURL_test= ""
     FromFinishRegistraion= ""
     CSRFToken= csrf
@@ -112,13 +165,22 @@ func get_request_body(username,password,country,csrf string) url.Values{
 return data
 }
 func FollowSSORedirect(client *http.Client, redirect_url string,retry int)error{
-  if retry>9{
+  if retry>7{
       return errors.New("Error Following Redirect")
     }
   req, err := http.NewRequest("GET",redirect_url,nil)
+  req.Header.Add("Pragma","no-cache")
+  //req.Header.Add("Origin","https://cp.adidas.com")
+  req.Header.Add("Accept-Language","en-US,en;q=0.8")
+  req.Header.Add("Upgrade-Insecure-Requests","1")
+  req.Header.Add("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+  req.Header.Add("Cache-Control","no-cache")
+ // req.Header.Add("Referer","https://cp.adidas.com/web/eCom/en_US/loadsignin?target=account")
+  req.Header.Add("Connection","keep-alive")
   req.Header.Add("User-Agent",UserAgent)
 res, err:= client.Do(req)
 if err!=nil{
+  time.Sleep(time.Millisecond * 200)
   followed := FollowSSORedirect(client,redirect_url,retry+1)
   return followed
 }
@@ -127,14 +189,22 @@ defer res.Body.Close()
 
 }
 func CreateSSODomainCookie(client *http.Client, urlstr string,retry int)error{
-  if retry>9{
+  if retry>7{
       return errors.New("Error Creating Cookie")
     }
 req, err := http.NewRequest("GET",urlstr,nil)
-
-req.Header.Add("User-Agent",UserAgent)
+req.Header.Add("Pragma","no-cache")
+ // req.Header.Add("Origin","https://cp.adidas.com")
+  req.Header.Add("Accept-Language","en-US,en;q=0.8")
+  req.Header.Add("Upgrade-Insecure-Requests","1")
+  req.Header.Add("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+  req.Header.Add("Cache-Control","no-cache")
+ // req.Header.Add("Referer","https://cp.adidas.com/web/eCom/en_US/loadsignin?target=account")
+  req.Header.Add("Connection","keep-alive")
+  req.Header.Add("User-Agent",UserAgent)
 res, err:= client.Do(req)
 if err!=nil{
+  time.Sleep(time.Millisecond * 200)
   err := CreateSSODomainCookie(client,urlstr,retry +1)
   return err
 }
@@ -144,14 +214,22 @@ defer res.Body.Close()
 
 }
 func ResumeCP(client *http.Client,urlstr string,retry int)(string,error){
-   if retry>9{
+   if retry>7{
       return "",errors.New("Error Resuming CP")
     }
   req, err := http.NewRequest("GET",urlstr,nil)
-
-req.Header.Add("User-Agent",UserAgent)
+req.Header.Add("Pragma","no-cache")
+ // req.Header.Add("Origin","https://cp.adidas.com")
+  req.Header.Add("Accept-Language","en-US,en;q=0.8")
+  req.Header.Add("Upgrade-Insecure-Requests","1")
+  req.Header.Add("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+  req.Header.Add("Cache-Control","no-cache")
+  //req.Header.Add("Referer","https://cp.adidas.com/web/eCom/en_US/loadsignin?target=account")
+  req.Header.Add("Connection","keep-alive")
+  req.Header.Add("User-Agent",UserAgent)
 res, err:= client.Do(req)
 if err!=nil{
+  time.Sleep(time.Millisecond * 200)
   saml,err := ResumeCP(client,urlstr,retry +1)
   return saml,err
 }
@@ -163,7 +241,7 @@ return saml,nil
 
 }
 func PostSaml(client *http.Client,urlstr,SAML,relay_state string,retry int) (string,error){
-   if retry>9{
+   if retry>7{
       return "", errors.New("Error Posting Saml")
     }
    data := url.Values{}
@@ -171,11 +249,20 @@ func PostSaml(client *http.Client,urlstr,SAML,relay_state string,retry int) (str
   data.Add("RelayState",relay_state)
   data.Add("submit","Resume")
   req, err := http.NewRequest("POST", urlstr, bytes.NewBufferString(data.Encode()))
-req.Header.Add("User-Agent", UserAgent)
-    req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+  req.Header.Add("Pragma","no-cache")
+ // req.Header.Add("Origin","https://cp.adidas.com")
+  req.Header.Add("Accept-Language","en-US,en;q=0.8")
+  req.Header.Add("Upgrade-Insecure-Requests","1")
+  req.Header.Add("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+  req.Header.Add("Cache-Control","no-cache")
+  //req.Header.Add("Referer","https://cp.adidas.com/web/eCom/en_US/loadsignin?target=account")
+  req.Header.Add("Connection","keep-alive")
+  req.Header.Add("User-Agent", UserAgent)
+  req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
     req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 res, err := client.Do(req)
 if err!=nil{
+  time.Sleep(time.Millisecond * 200)
   ref,err := PostSaml(client,urlstr,SAML,relay_state,retry+1)
   return ref,err
 }
@@ -186,40 +273,32 @@ return ref,nil
 
 }
 func PostRef(client *http.Client,urlstr,REF,target string,retry int)error{
-   if retry>9{
+   if retry>7{
       return errors.New("Error Posting Ref")
     }
    data := url.Values{}
   data.Add("TargetResource",target)
   data.Add("REF",REF)
   req, err := http.NewRequest("POST", urlstr, bytes.NewBufferString(data.Encode()))
-req.Header.Add("User-Agent", UserAgent)
+  req.Header.Add("Pragma","no-cache")
+ // req.Header.Add("Origin","https://cp.adidas.com")
+  req.Header.Add("Accept-Language","en-US,en;q=0.8")
+  req.Header.Add("Upgrade-Insecure-Requests","1")
+  req.Header.Add("Accept","text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+  req.Header.Add("Cache-Control","no-cache")
+  //req.Header.Add("Referer","https://cp.adidas.com/web/eCom/en_US/loadsignin?target=account")
+  req.Header.Add("Connection","keep-alive")
+  req.Header.Add("User-Agent", UserAgent)
     req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
     req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 res, err := client.Do(req)
 if err!=nil{
+  time.Sleep(time.Millisecond * 200)
    err:= PostRef(client,urlstr,REF,target,retry+1)
    return err
 }
 defer res.Body.Close()
 return nil
-}
-func CheckMyAccount(client *http.Client, urlstr string)bool{
-  req, err := http.NewRequest("GET",urlstr,nil)
-
-req.Header.Add("User-Agent",UserAgent)
-//req.Header.Add("Referer",referer)
-res,_:= client.Do(req)
-if err!=nil{
-  panic(err)
-}
-defer res.Body.Close()
-if res.StatusCode==301{
-  if res.Header.Get("Location")=="https://www.adidas.com/us/myaccount-show?fromlogin=true"{
-    return true
-  }
-}
-return false
 }
 func MakeResumeURL(location,cp_resume string) string{
   u,_:= url.Parse(location)
