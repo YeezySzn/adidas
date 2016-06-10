@@ -5,7 +5,6 @@ import (
 	"net/url"
 //  "time"
   "errors"
- "strings"
   "bytes"
   //"io/ioutil"
  "strconv"
@@ -17,26 +16,11 @@ var (
 )
 func get_request_url(step,country string)string{
 	var url string
-   var locale string
- switch (country){
- case "DK":
-  locale="da_DK"
- case "CZ":
-  locale="cs_CZ"
-case "BE":
-  locale = "fr_BE"
-case "IE":
-  locale="en_IE"
-case "US":
-  locale="en_US"
-case "SE":
-  locale="sv_SE"
-default :
-  locale = strings.ToLower(country)+"_"+country
-
- }
+   locale := adidas.Locale(country)
 	if step=="shipping"{
 	url = "https://www.adidas."+adidas.Serverext[country]+ "/on/demandware.store/Sites-adidas-"+country+"-Site/"+locale+"/CODelivery-Start"
+}else if step=="payment"{
+  url = "https://www.adidas."+adidas.Serverext[country] + "on/demandware.store/Sites-adidas-"+ country+"-Site/"+locale+"/COSummary-Start"
 }
 return url
 }
@@ -86,7 +70,7 @@ data.Add("format","ajax")
   return data
 }
 func AqcuireShippingKeys(client *http.Client,country string,retry int) (string,string,error){
-if retry>4{
+if retry>6{
         return "","",errors.New("Error Aqcuireing Shipping Keys")
     }
 urlstr := get_request_url("shipping",country)
@@ -110,7 +94,7 @@ key,_ := doc.Find("input[name=dwfrm_delivery_securekey]").Attr("value")
 return action,key,nil
   }
   func SubmitShippingDetails(client *http.Client,action,key,shippingisbilling,country string,profile map[string]string,retry int) error{
-    if retry>4{
+    if retry>6{
         return errors.New("Error Submitted Shipping")
     }
     data := get_request_body("shipping",country,key,shippingisbilling,profile)

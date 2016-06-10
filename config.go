@@ -3,6 +3,7 @@ import (
 
 	"labix.org/v2/mgo/bson"
 	"time"
+  "strings"
 )
 var (
 	UserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36"
@@ -25,6 +26,27 @@ func mkserverext()map[string]string{
   s["NL"]="nl"
   s["SE"]="se"
   return s
+}
+func Locale(country string)string{
+  var locale string
+ switch (country){
+ case "DK":
+  locale="da_DK"
+ case "CZ":
+  locale="cs_CZ"
+case "BE":
+  locale = "fr_BE"
+case "IE":
+  locale="en_IE"
+case "US":
+  locale="en_US"
+case "SE":
+  locale="sv_SE"
+default :
+  locale = strings.ToLower(country)+"_"+country
+
+ }
+ return locale
 }
 type CyberSourceResponse struct{
 	Fields map[string]interface{} `json:"fieldsToSubmit"`

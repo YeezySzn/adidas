@@ -9,14 +9,12 @@ import (
 	"io/ioutil"
 )
 func create_cart_link(country string)string{
- path := "/on/demandware.store/Sites-adidas-" + country+ "-Site/en_" + country + "/Cart-MiniAddProduct"
+	locale := Locale(country)
+ path := "/on/demandware.store/Sites-adidas-" + country+ "-Site/" + locale + "/Cart-MiniAddProduct"
 	url := "http://www.adidas." + Serverext[country] +path 
   return url
 }
-func ATC(client *http.Client,pid,country string,retry int)error{
-	  if retry>4{
-        return errors.New("Error Adding: "+pid+" to Cart")
-    }
+func ATC(client *http.Client,pid,country,key string)error{	
 masterpid:= strings.Split(pid,"_")[0]
 urlstr := create_cart_link(country)
 data := url.Values{}
@@ -24,8 +22,8 @@ data.Add("pid",pid)
 data.Add("masterPid",masterpid)
 data.Add("layer","Add To Bag overlay")
 data.Add("Quantity","1")
-data.Add("x-PrdRtt","")
-data.Add("g-recaptcha-response","")
+data.Add("x-PrdRtt",key)
+data.Add("g-recaptcha-response",key)
 data.Add("request","ajax")
 data.Add("responseformat","json")
 data.Add("ajax","true")
@@ -37,13 +35,11 @@ req.Header.Add("User-Agent", UserAgent)
     req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 res, err := client.Do(req)
 if err!=nil{
-
-	err := ATC(client,pid,country,retry+1)
-    return err
+	return errors.New("Error Adding: "+pid+" to Cart")
+	 
 }
 if res.StatusCode!=http.StatusOK{
-err := ATC(client,pid,country,retry+1)
-return err
+	 return errors.New("Error Adding: "+pid+" to Cart")
 }
 
 defer res.Body.Close()
@@ -53,7 +49,6 @@ added := strings.Contains(j,"SUCCESS")
 if added{
 return nil
 }else{
-	err := ATC(client,pid,country,retry+1)
-    return err
+	return errors.New("Error Adding: "+pid+" to Cart")
 }
 }

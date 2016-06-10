@@ -126,7 +126,7 @@ return action,paymentkey,nil
 }
 func SubmitPayDetails(client *http.Client,action, paymentkey string,profile map[string]string,retry int) (map[string]interface{},error){
     if retry>6{
-        return nil,errors.New("Error Submitted Shipping")
+        return nil,errors.New("Error Submitted Payment Details")
     }
     cardint:= profile["cardtype"]
     data := url.Values{}

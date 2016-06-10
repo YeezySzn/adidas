@@ -11,24 +11,7 @@ import (
   //"fmt"
 )
 func get_server_url(country string) Server{
-  var locale string
- switch (country){
- case "DK":
-  locale="da_DK"
- case "CZ":
-  locale="cs_CZ"
-case "BE":
-  locale = "fr_BE"
-case "IE":
-  locale="en_IE"
-case "US":
-  locale="en_US"
-case "SE":
-  locale="sv_SE"
-default :
-  locale = strings.ToLower(country)+"_"+country
-
- }
+  locale := Locale(country)
   return Server{
     sign_in_page: "https://cp.adidas." + Serverext[country] + "/web/eCom/" + locale + "/loadsignin?target=account",
     start_sso_session: "https://cp.adidas." + Serverext[country] + "/idp/startSSO.ping",
@@ -57,7 +40,7 @@ req.Header.Add("Pragma","no-cache")
 req.Header.Add("User-Agent",UserAgent)
 res, err:= client.Do(req)
 if err!=nil{
-  time.Sleep(time.Millisecond * 500)
+  time.Sleep(time.Millisecond * 200)
   csrf,err := LoadSignInPage(client,urlstr,retry+1)
     return csrf,err
   }
@@ -103,25 +86,8 @@ if res.StatusCode==302{
 
 }
 func get_request_body(username,password,country,csrf string) url.Values{
-  var locale string
- switch (country){
- case "DK":
-  locale="da_DK"
- case "CZ":
-  locale="cs_CZ"
-case "BE":
-  locale = "fr_BE"
-case "IE":
-  locale="en_IE"
-case "US":
-  locale="en_US"
-case "SE":
-  locale="sv_SE"
-default :
-  locale = strings.ToLower(country)+"_"+country
-
- }
-    var (
+   var (
+    locale = Locale(country)
     signinSubmit= "Sign in"
     IdpAdapterId= "adidasIdP10"
     SpSessionAuthnAdapterId= "https://cp.adidas." + Serverext[country] + "/web/"
